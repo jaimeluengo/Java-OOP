@@ -24,6 +24,20 @@ class PhDTest {
 		jaime.setAdvisor2(David);
 		assertEquals(jaime.advisor1(),Lebron);
 		assertEquals(jaime.advisor2(),David);
+		assert(1==Lebron.numAdvisees());
+		assert(1==David.numAdvisees());
+	}
+	
+	@Test
+	void testGroupC() {
+		PhD David= new PhD("David Gries",1,1973);
+		PhD Lebron= new PhD("Lebron James",11,1995,David);
+		PhD jaime= new PhD("Jaime Luengo",12,2019,Lebron,David);
+		assert(Lebron.advisor1()==David);
+		assert(Lebron.numAdvisees()==1);
+		assert(David.numAdvisees()==2);
+		assert(jaime.advisor1()==Lebron);
+		assert(jaime.advisor2()==David);
 	}
 
 }
