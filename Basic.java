@@ -47,4 +47,22 @@ public class PhD {
 	public int numAdvisees() {
 		return	n_advisees;
 	}
+	
+	/**Add p as the first advisor of this person.
+Precondition: the first advisor is unknown and p is not null.*/
+	public void setAdvisor1(PhD p) {
+		assert advisor1==null && p!=null;
+		advisor1=p;
+		p.n_advisees+=1;
+	}
+	/**Add p as the second advisor of this person.
+Precondition: The first advisor (of this person) is known, the second advisor
+is unknown, p is not null, and p is different from the first advisor.*/
+	public void setAdvisor2(PhD p) {
+		assert advisor2==null && p!=null && p!=advisor1;
+		advisor2=p;
+		p.n_advisees+=1;
+	}
+	public static void main(String[] args) {
+	}	
 }
