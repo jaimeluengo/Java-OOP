@@ -63,6 +63,31 @@ is unknown, p is not null, and p is different from the first advisor.*/
 		advisor2=p;
 		p.n_advisees+=1;
 	}
+	/** Constructor: a PhD with name n, PhD month m, PhD year y, first advisor
+adv1, and no second advisor. Precondition: n has at least 1 char, m is in 1..12,
+and adv1 is not null.*/
+	public PhD(String n, int m, int y, PhD adv1) {
+		assert n.length()>1 && (m<13 && m>0) && adv1 != null;
+		name = n;
+		month=m;
+		year=y;
+		advisor1=adv1;
+		advisor1.n_advisees+=1;
+	}
+	
+	/**Constructor: a PhD with name n, PhD month m, PhD year y, first advisor
+adv1, and second advisor adv2. Precondition: n has at least 1 char, m is in 1..12,
+adv1 and adv2 are not null, and adv1 and adv2 are different*/
+	public PhD(String n, int m, int y, PhD adv1, PhD adv2) {
+		assert n.length()>1 && (m<13 && m>0) && adv1 != null && adv2 != null && adv1 != adv2;
+		name = n;
+		month=m;
+		year=y;
+		advisor1=adv1;
+		advisor1.n_advisees+=1;
+		advisor2=adv2;
+		advisor2.n_advisees+=1;
+	}
 	public static void main(String[] args) {
 	}	
 }
