@@ -88,6 +88,25 @@ adv1 and adv2 are not null, and adv1 and adv2 are different*/
 		advisor2=adv2;
 		advisor2.n_advisees+=1;
 	}
+	/**Return value of "this PhD has at least one advisee",
+i.e. true if this PhD has at least one advisee and false
+otherwise*/
+	public boolean hasAdvisee() {
+		return (numAdvisees()>0);
+	}
+	/**Return value of "p is not null and this person got the PhD
+after p.”*/
+	public boolean gotAfter(PhD p) {
+		return(p!=null && (p.month+p.year*12<month+year*12));//scaling the years to month unit
+	}
+	/**Return value of "this person and p are intellectual siblings."
+Precondition: p is not null.*/
+	public boolean areSiblings(PhD p){
+		assert(p!=null);
+		return(advisor1==p.advisor1());
+	}
+	
+	
 	public static void main(String[] args) {
 	}	
 }
