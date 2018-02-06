@@ -1,5 +1,4 @@
-/** NetId: nnnnn, nnnnn. Time spent: hh hours, mm minutes.
- An instance maintains info about the PhD of a person. */
+/An instance maintains info about the PhD of a person. */
 
 public class PhD {
 	private String name;//name of PhD holder, >1 character
@@ -47,7 +46,7 @@ public class PhD {
 	public int numAdvisees() {
 		return	n_advisees;
 	}
-	
+
 	/**Add p as the first advisor of this person.
 Precondition: the first advisor is unknown and p is not null.*/
 	public void setAdvisor1(PhD p) {
@@ -74,7 +73,7 @@ and adv1 is not null.*/
 		advisor1=adv1;
 		advisor1.n_advisees+=1;
 	}
-	
+
 	/**Constructor: a PhD with name n, PhD month m, PhD year y, first advisor
 adv1, and second advisor adv2. Precondition: n has at least 1 char, m is in 1..12,
 adv1 and adv2 are not null, and adv1 and adv2 are different*/
@@ -103,10 +102,13 @@ after p.”*/
 Precondition: p is not null.*/
 	public boolean areSiblings(PhD p){
 		assert(p!=null);
-		return(advisor1==p.advisor1());
+		return(this!=p &&( advisor1==p.advisor1()
+				||  advisor2==p.advisor2()
+				||  advisor1==p.advisor2()
+				||  advisor2==p.advisor1()));
 	}
-	
-	
+
+
 	public static void main(String[] args) {
 	}	
 }
