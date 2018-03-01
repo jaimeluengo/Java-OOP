@@ -8,7 +8,7 @@ class DLListTest {
 
 	@Test
 	void PrependAppendStringTest() {
-		DLList loco= new DLList<Integer>();
+		DLList<Integer> loco= new DLList<Integer>();
 		int[] list1= {7,3,4,5,6};
 		for(int i=0;i<5;i++) {
 			loco.prepend(list1[i]);
@@ -21,12 +21,13 @@ class DLListTest {
 	
 	@Test
 	void getNodeTest() {
-		DLList loco= new DLList<Integer>();
+		DLList<Integer> loco= new DLList<Integer>();
 		int[] list1= {7,3,4,5,6};
 		for(int i=0;i<5;i++) {
 			loco.prepend(list1[i]);
 			loco.append(list1[i]);
 		}
+		//create node for testing that actually points to the node to be tested
 		DLList<Integer>.Node node_c= loco.last().prev().prev();
 		assertEquals(node_c,loco.getNode(7));
 		DLList<Integer>.Node node_b= loco.first().next();
@@ -35,35 +36,43 @@ class DLListTest {
 	
 	@Test
 	void deleteTest(){
-		DLList loco= new DLList<Integer>();
+		DLList<Integer> loco= new DLList<Integer>();
 		int[] list1= {7,3,4,5,6};
 		for(int i=0;i<5;i++) {
 			loco.prepend(list1[i]);
 		}
-		DLList<Integer>.Node test =loco.first().next().next();
+		DLList<Integer>.Node test =loco.getNode(2);
 		loco.delete(test);
-		assertEquals(loco.first().next().next(),test.next());
-		assertEquals(loco.first().next(),test.prev());
-		DLList one= new DLList<Integer>();
+		assertEquals("[6, 5, 3, 7]",loco.toString());
+		loco.delete(loco.last());
+		assertEquals("[6, 5, 3]",loco.toString());
+		loco.delete(loco.first());
+		assertEquals("[5, 3]",loco.toString());
+		assertEquals(2,loco.size());
+		DLList<Integer> one= new DLList<Integer>();
 		one.append(list1[0]);
 		DLList<Integer>.Node oneTest=one.first();
 		one.delete(oneTest);
+		assertEquals("[]",one.toString()); 
+		assertEquals(0,one.size());
 	}
 	
 	@Test
 	void insertAfterTest() {
-		DLList loco= new DLList<Integer>();
+		DLList<Integer> loco= new DLList<Integer>();
 		int[] list1= {7,3,4,5,6};
 		for(int i=0;i<5;i++) {
 			loco.prepend(list1[i]);
 		}
-		DLList<Integer>.Node test =loco.first().next().next();
+		assertEquals(5,loco.size());
+		DLList<Integer>.Node test =loco.getNode(3);
 		loco.insertAfter(11, test);
-		assertEquals(11,loco.first().next().next().next().value());
+		assertEquals("[6, 5, 4, 3, 11, 7]",loco.toString());
+		assertEquals(6,loco.size());
 		test=loco.last();
 		loco.insertAfter(11, test);
-		assertEquals(11,loco.last().value());
-		System.out.println(3/2);
+		assertEquals("[6, 5, 4, 3, 11, 7, 11]",loco.toString());
+		assertEquals(7,loco.size());
 	}
 
 }
