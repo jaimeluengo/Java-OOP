@@ -32,5 +32,38 @@ class DLListTest {
 		DLList<Integer>.Node node_b= loco.first().next();
 		assertEquals(node_b,loco.getNode(1));
 	}
+	
+	@Test
+	void deleteTest(){
+		DLList loco= new DLList<Integer>();
+		int[] list1= {7,3,4,5,6};
+		for(int i=0;i<5;i++) {
+			loco.prepend(list1[i]);
+		}
+		DLList<Integer>.Node test =loco.first().next().next();
+		loco.delete(test);
+		assertEquals(loco.first().next().next(),test.next());
+		assertEquals(loco.first().next(),test.prev());
+		DLList one= new DLList<Integer>();
+		one.append(list1[0]);
+		DLList<Integer>.Node oneTest=one.first();
+		one.delete(oneTest);
+	}
+	
+	@Test
+	void insertAfterTest() {
+		DLList loco= new DLList<Integer>();
+		int[] list1= {7,3,4,5,6};
+		for(int i=0;i<5;i++) {
+			loco.prepend(list1[i]);
+		}
+		DLList<Integer>.Node test =loco.first().next().next();
+		loco.insertAfter(11, test);
+		assertEquals(11,loco.first().next().next().next().value());
+		test=loco.last();
+		loco.insertAfter(11, test);
+		assertEquals(11,loco.last().value());
+		System.out.println(3/2);
+	}
 
 }
