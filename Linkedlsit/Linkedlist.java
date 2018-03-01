@@ -1,17 +1,6 @@
 package LinkedList;
 
-/* Time spent on a3:  hh hours and mm minutes.
- *
- * When you change the above, please do it carefully. Change hh to
- * the hours and mm to the minutes and leave everything else as is.
- * If the minutes are 0, change mm to 0. This will help us in
- * extracting times and giving you the average and max.
- * 
- * Name:Jaime Luengo Rozas
- * Netid: jl3752
- * What I thought about this assignment:
- *
- *
+/* LinkedList created from scratch
  */
 
 /** An instance is a doubly linked list. */
@@ -151,7 +140,9 @@ public class DLList<E>  {
 	public void delete(Node n) {
 		assert(n!=null && size>0);
 		if(size==1){
-			size=0;
+			size--;
+			first=null;
+			last=null;
 		}else {
 			size--;
 			if(n==first) {
@@ -172,9 +163,9 @@ public class DLList<E>  {
 	 * Precondition: n must be a node of this list; it may not be null. */
 	public void insertAfter(E v, Node n) {
 		assert(n!=null && size>0);
-		size++;
 		if(n.next==null) append(v);
 		else{
+			size++;
 			Node f=new Node(n,v,n.next);
 			n.next.prev=f;
 			n.next=f;
