@@ -1,11 +1,3 @@
-/* NetId(s): xxxnn, xxxnn. Time spent: h hours, mm minutes.
-
- * Name(s):
- * What I thought about this assignment:
- * 
- *
- */
-
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
