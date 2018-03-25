@@ -1,275 +1,771 @@
-import java.lang.reflect.Array;
-import java.util.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** Please keep up with the pinned Piazza note Assignment A5.
- *  Study the slides of the Lecture on Priority Queues and Heaps
- *  and the A5 handout before starting on this assignment.
- *  It does no good to start programming without fully understanding
- *  the Class Invariant. */
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.NoSuchElementException;
+import java.util.Random;
 
-/** An instance is a min-heap or a max-heap of distinct values of type E
- *  with priorities of type double. */
-public class Heap<E> {
+import org.junit.FixMethodOrder;
+import org.junit.jupiter.api.Test;
+import org.junit.runners.MethodSorters;
 
-    /** Class Invariant:
-     *   1. d[0..size-1] represents a complete binary tree. d[0] is the root;
-     *      For each k, d[2k+1] and d[2k+2] are the left and right children of d[k].
-     *      If k != 0, d[(k-1)/2] (using integer division) is the parent of d[k].
-     *   
-     *   2. For k in 0..size-1, d[k] contains the value and its priority.
-     *   
-     *   3. The values in d[0..size-1] are all different.
-     *   
-     *   4. For k in 1..size-1,
-     *      if isMinHeap, (d[k]'s priority) >= (d[k]'s parent's priority),
-     *      otherwise,    (d[k]'s priority) <= (d[k]'s parent's priority).
-     *   
-     *   map and the tree are in sync, meaning:
-     *   
-     *   5. The keys of map are the values in d[0..size-1].
-     *      This implies that this.size = map.size().
-     *   
-     *   6. if value v is in d[k], then map.get(v) returns k.
-     */
-    protected final boolean isMinHeap;
-    protected VP[] d;
-    protected int size;
-    protected HashMap<E, Integer> map;
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
+class HeapTest {
 
-    /** Constructor: an empty heap with capacity 10.
-     *  It is a min-heap if isMin is true, a max-heap if isMin is false. */
-    public Heap(boolean isMin) {
-        isMinHeap= isMin;
-        d= createVPArray(10);
-        map= new HashMap<E, Integer>();
+    /** Use assertEquals to check that all fields of mh are correct.
+     *  This means that:
+     *    (1) d.length, mh.size, and mh.map.size() are all equal.
+     *    (2) for each i in 0..size-1, (c[i], p[i]) is the entry mh.d[i]
+     *    (3) For each i in 0..size-1, (c[i], i) is in map.
+     *    
+     *    Precondition: c.length = p.length.
+     *                  No two priorities in p differ by less than .0001
+     *                  (c, p) is actually a good heap.
+     *   */
+    public <T> void check(T[] c, double p[], Heap<T> mh) {
+        assert c.length == p.length;
+        // check sizes
+        assertEquals(c.length, mh.size);
+        assertEquals(c.length, mh.map.size());
+
+        // check values
+        String stringB= toStringB(c);
+        String stringC= toStringHeapValues(mh);
+        assertEquals(stringB, stringC);
+
+        // check priorities
+        String stringBpriorities= toStringB(p);
+        String stringCpriorities= toStringHeapPriorities(mh);
+        assertEquals(stringBpriorities, stringCpriorities);
+
+        // check map
+        ArrayList<Integer> s= new ArrayList<Integer>();
+        for (int k= 0; k < c.length; k= k+1) {s.add(k);}
+        ArrayList<Integer> mhS= new ArrayList<Integer>();
+        for (int k= 0; k < c.length; k= k+1) {mhS.add(mh.map.get(c[k]));}
+
     }
 
-    /** A VP object houses a value and a priority. */
-    class VP {
-        E val;             // The value
-        double priority;   // The priority
+    /** Use assertEquals to check that expected val m1 and 
+     * computed val m2 are equal. */
+    public void check(Heap<Integer> m1, Heap<Integer> m2) {
+        // check sizes
+        assertEquals(m1.size, m2.size);
+        assertEquals(m1.size, m2.map.size());
 
-        /** An instance with value v and priority p. */
-        VP(E v, double p) {
-            val= v;
-            priority= p;
+        // check values
+        String stringM1= toStringHeapValues(m1);
+        String stringM2= toStringHeapValues(m2);
+        assertEquals(stringM1, stringM2);
+
+        // check priorities
+        String stringM1p= toStringHeapPriorities(m1);
+        String stringM2p= toStringHeapPriorities(m2);
+        assertEquals(stringM1p, stringM2p);
+
+        //check VP fields
+        assertTrue(m1.map.equals(m2.map));
+    }
+
+    /** = a list of values in d, separated by ", " and delimited by "[", "]" */
+    public <V> String toStringB(V[] b) {
+        String res= "[";
+        for (int h= 0; h < b.length; h= h+1) {
+            if (h > 0) res= res + ", ";
+            res= res + b[h];
         }
+        return res + "]";
+    }
 
-        /** Return a representation of this VP object. */
-        @Override public String toString() {
-            return "(" + val + ", " + priority + ")";
+    /** = a list of values in d, separated by ", " and delimited by "[", "]" */
+    public String toStringB(double[] b) {
+        String res= "[";
+        for (int h= 0; h < b.length; h= h+1) {
+            if (h > 0) res= res + ", ";
+            res= res + b[h];
         }
+        return res + "]";
     }
 
-    /** Add v with priority p to the heap.
-     *  Throw an illegalArgumentException if v is already in the heap.
-     *  The expected time is logarithmic and the worst-case time is linear
-     *  in the size of the heap. */
-    public void add(E v, double p) throws IllegalArgumentException {
-        // TODO #1: Write this whole method. Note that bubbleUp is not implemented,
-        // so calling it has no effect (yet). The first tests of add, using
-        // test00Add, ensure that this method maintains fields d and map properly,
-        // without worrying about bubbling up.
-        if (map.containsKey(v)) { 
-            throw new IllegalArgumentException("Value already in the heap");
+    /** = a list of values in mh.b[0..mh.size-1], separated by ", " and delimited by "[", "]" */
+    public <V> String toStringHeapValues(Heap<V> mh) {
+        String res= "[";
+        for (int h= 0; h < mh.size; h= h+1) {
+            if (h > 0) res= res + ", ";
+            res= res + mh.d[h].val;
         }
-        ensureSpace();
-        size++;
-        d[size-1]=new VP(v,p);
-        map.put(v, size-1);
-        bubbleUp(size-1);
-        // Testing procedure test00Add should work. Look at its specification.
-        
-        // Do NOT call bubbleUp until the class invariant is true except
-        // for the need to bubble up.
-        // Calling bubbleUp is the last thing to be done.
-        
+        return res + "]";
     }
 
-    /** If size = length of d, double the length of array d.
-     *  The worst-case time is proportional to the length of d. */
-    protected void ensureSpace() {
-        //TODO #2. Any method that increases the size of the heap must call
-        // this method first. 
-        //
-        // Use method copyOf in class java.util.Arrays
-        // to create the larger array and do the copying.
-        // Look at the specification of java.util.Arrays.
-        //
-        // If you write this method correctly AND method
-        // add calls this method appropriately, testing procedure
-        // test10ensureSpace will not find errors.
-    	if(size==d.length) d= Arrays.copyOf(d, 2*size);
+    /** = a list of priorities in mh.b[0..mh.size-1], separated by ", " and delimited by "[", "]" */
+    public <V> String toStringHeapPriorities(Heap<V> mh) {
+        String res= "[";
+        for (int h= 0; h < mh.size; h= h+1) {
+            if (h > 0) res= res + ", ";
+            res= res + mh.d[h].priority;
+        }
+        return res + "]";
     }
 
-    /** Return the size of this heap.
-     *  This operation takes constant time. */
-    public int size() { // Do not change this method
-        return size;
-    }
-
-    /** Swap d[h] and d[k].
-     *  Precondition: 0 <= h < heap-size, 0 <= k < heap-size. */
-    void swap(int h, int k) {
-        assert 0 <= h  &&  h < size  &&  0 <= k  &&  k < size;
-        //TODO 3: When bubbling values up and (later on) down, two values,
-        // say d[h] and d[k], will have to be swapped. At the same time,
-        // the definition of map has to be maintained.
-        // In order to always get this right, use method swap for this.
-        // Method swap is tested by testing procedure test13Swap --it will
-        // find no errors if you write this method properly.
-        // 
-        // Read the Assignment A5 note about map.put(...).
-    	VP n = d[h];
-    	map.put(d[k].val,h);//update child address to parent's
-    	d[h] = d[k];
-    	map.put(n.val,k);//update parent address to child's
-    	d[k] = n;
-
+    /** Return a min-heap with the values of c added into it, in that
+     * order. The priorities are the values. */
+    public Heap<Integer> minHeapify(Integer[] c) {
+        Heap<Integer> m= new Heap<Integer>(true);
+        for (Integer e : c) {
+            m.add(e, (double)e);
+        }
+        return m;
     }
     
-    /** If a value with priority p1 should be above a value with priority
-     *       p2 in the heap, return 1.
-     *  If priority p1 and priority p2 are the same, return 0.
-     *  If a value with priority p1 should be below a value with priority
-     *       p2 in the heap, return -1.
-     *  This is based on what kind of a heap this is,
-     *  E.g. a min-heap, the value with the smallest priority is in the root.
-     *  E.g. a max-heap, the value with the largest priority is in the root.
-     */
-    public int compareTo(double p1, double p2) {
-        if (p1 == p2) return 0;
-        if (isMinHeap) {
-            return p1 < p2 ? 1 : -1;
+    /** Return a max-heap with the values of c added into it, in that
+     * order. The priorities are the values. */
+    public Heap<Integer> maxHeapify(Integer[] c) {
+        Heap<Integer> m= new Heap<Integer>(false);
+        for (Integer e : c) {
+            m.add(e, (double)e);
         }
-        return p1 > p2 ? 1 : -1;
+        return m;
     }
 
-    /** If d[m] should be above d[n] in the heap, return 1.
-     *  If d[m]'s priority and d[n]'s priority are the same, return 0.
-     *  If d[m] should be below d[n] in the heap, return -1.
-     *  This is based on what kind of a heap this is,
-     *  E.g. a min-heap, the value with the smallest priority is in the root.
-     *  E.g. a max-heap, the value with the largest priority is in the root.
-     */
-    public int compareTo(int m, int n) {
-        return compareTo(d[m].priority, d[n].priority);
+    /** Return a min-heap with the values of c and corresponding priorities p
+     * added to it, in that order.  */
+    public Heap<Integer> minHeapify(Integer[] c, double[] p) {
+        Heap<Integer> m= new Heap<Integer>(true);
+        for (int h= 0; h < c.length; h= h+1) {
+            int h1= h;
+            m.add(c[h1], p[h1]);
+        }
+        return m;
+    }
+    
+    /** Return a max-heap with the values of c and corresponding priorities p
+     * added to it, in that order.  */
+    public Heap<Integer> maxHeapify(Integer[] c, double[] p) {
+        Heap<Integer> m= new Heap<Integer>(false);
+        for (int h= 0; h < c.length; h= h+1) {
+            int h1= h;
+            m.add(c[h1], p[h1]);
+        }
+        return m;
     }
 
-    /** Bubble d[k] up the heap to its right place.
-     *  Precondition: 0 <= k < size and
-     *       The class invariant is true, except perhaps
-     *       that d[k] belongs above its parent (if k > 0)
-     *       in the heap, not below it. */
-    void bubbleUp(int k) {
-        // TODO #4 This method should be called within add in order
-        // to bubble a value up to its proper place, based on its priority.
-        // Do not use recursion. Use iteration.
-        // Use method compareTo to test whether value k is in its right place.
-        // If this method is written properly, testing procedure
-        // test15Add_BubbleUp() will not find any errors.
-        assert 0 <= k  &&  k < size;
-        int p =(k-1)/2;
-        while(k>0 && compareTo(d[k].priority,d[p].priority)>0) {
-        	swap(k,p);
-        	k=p;
-        	p =(k-1)/2;
+    /** Return a min-heap with the values of c and corresponding priorities p
+     * added to it, in that order. */
+    public Heap<String> minHeapify(String[] c, double[] p) {
+        Heap<String> m= new Heap<String>(true);
+        for (int h= 0; h < c.length; h= h+1) {
+            m.add(c[h], p[h]);
+        }
+        return m;
+    }
+
+    /** Return a min-heap with values c without using add. Values used as priorities */
+    public Heap<Integer> griesHeapify(Integer[] c) {
+        Heap<Integer> heap= new Heap<Integer>(true);
+        heap.d= heap.createVPArray(c.length);
+        for (int k= 0; k < c.length; k= k+1 ) {
+            double bk= c[k];
+            heap.d[k]= heap.new VP(c[k], bk);
+            heap.map.put(c[k], k);
+        }
+        heap.size= c.length;
+        return heap;
+    }
+    
+    /** Return a max-heap with values c without using add. Values used as priorities */
+    public Heap<Integer> griesHeapifyMax(Integer[] c) {
+        Heap<Integer> heap= new Heap<Integer>(false);
+        heap.d= heap.createVPArray(c.length);
+        for (int k= 0; k < c.length; k= k+1 ) {
+            double bk= c[k];
+            heap.d[k]= heap.new VP(c[k], bk);
+            heap.map.put(c[k], k);
+        }
+        heap.size= c.length;
+        return heap;
+    }
+
+    /** Return a min-heap with values c and priorities p without using add. */
+    public Heap<Integer> griesHeapify(Integer[] c, double[] p) {
+        Heap<Integer> heap= new Heap<Integer>(true);
+        heap.d= heap.createVPArray(c.length); //new Entry[d.length];
+        for (int k= 0; k < c.length; k= k+1 ) {
+            heap.d[k]= heap.new VP(c[k], p[k]);
+            heap.map.put(c[k], k);
+        }
+        heap.size= c.length;
+        return heap;
+    }
+    
+    /** Return a max-heap with values c and priorities p without using add. */
+    public Heap<Integer> griesHeapifyMax(Integer[] c, double[] p) {
+        Heap<Integer> heap= new Heap<Integer>(false);
+        heap.d= heap.createVPArray(c.length); //new Entry[d.length];
+        for (int k= 0; k < c.length; k= k+1 ) {
+            heap.d[k]= heap.new VP(c[k], p[k]);
+            heap.map.put(c[k], k);
+        }
+        heap.size= c.length;
+        return heap;
+    }
+
+
+    @Test
+    /** Test whether add works in a min-heap when the priority of the
+     *  value being added is >= priorities of other values in the heap.
+     *  To test, we add 3 values and then test. */
+    public void test00Add() {
+        Heap<Integer> mh= minHeapify(new Integer[] {5, 7, 8});
+        check(new Integer[]{5, 7, 8}, new double[]{5.0, 7.0, 8.0}, mh);
+    }
+
+    @Test
+    /** Test that add throws the exception properly. */
+    public void test01AddException() {
+        Heap<Integer> mh2= minHeapify(new Integer[] {5, 7, 8});
+        assertThrows(IllegalArgumentException.class, () -> {mh2.add(5, 5.0);});
+    }
+
+
+    @Test
+    /** Test that adding integers 0..59 into a heap, with priorities,
+     *  same as values works. This will test that ensureSpace works 3 times.
+     *  Since the initial capacity of the heap is 10, it should be 80 at end. */
+    public void test10ensureSpace() {
+        Heap<Integer> mh= new Heap<Integer>(true);
+        Integer[] b= new Integer[60];
+        double[] p= new double[60];
+        for (int k= 0; k < 60; k= k+1) {
+            int k1= k;
+            mh.add(k1, (double)k1);
+            b[k]= k;
+            p[k]= (double)k;
+        }
+        check(b, p, mh);
+        assertEquals(80, mh.d.length);
+    }
+
+    @Test
+    /** Test that adding integers 0..9 into a heap, with priorities
+     *  same as values, works. This will test that ensureSpace doesn't
+     *  double space prematurely.
+     *  Then, add 1 more element and it should double the space. */
+    public void test11ensureSpace() {
+        Heap<Integer> mh= new Heap<Integer>(true);
+        Integer[] b= new Integer[10];
+        double[] p= new double[10];
+        for (int k= 0; k < 10; k= k+1) {
+            int k1= k;
+            mh.add(k1, (double)k1);
+            b[k]= k;
+            p[k]= (double)k;
+        }
+        check(b, p, mh);
+        assertEquals(10, mh.d.length);
+    }
+
+    @Test
+    /** Test that adding integers 0..10 into a heap, with priorities
+     *  same as values, works. This will test that ensureSpace doubles
+     *  the space. */
+    public void test12ensureSpace() {
+        Heap<Integer> mh= new Heap<Integer>(true);
+        Integer[] b= new Integer[11];
+        double[] p= new double[11];
+        for (int k= 0; k < 11; k= k+1) {
+            int k1= k;
+            mh.add(k1, (double)k1);
+            b[k]= k;
+            p[k]= (double)k;
+        }
+        check(b, p, mh);
+        assertEquals(20, mh.d.length);
+    }
+
+    @Test
+    /** Test Heap.swap. This is done using the fact that if the priority of
+     *  a value being DDED is >= priorities of values in the heap, the
+     *  added value is placed at the end of the heap. */
+    public void test13Swap() {
+        Heap<Integer> mh= minHeapify(new Integer[] {5, 7, 8, 9});
+        mh.swap(0, 1); // should be {7, 5, 8, 9}
+        mh.swap(1, 2); // should be {7, 8, 5, 9}
+        mh.swap(0, 3); // should be {9, 8, 5, 7}
+        mh.swap(2, 2); // should be {9, 8, 5, 7}
+        check(new Integer[]{9, 8, 5, 7}, new double[]{9.0, 8.0, 5.0, 7.0}, mh);
+    }
+
+    @Test
+    /** Check in a simple case that add is correct */
+    public void test15add() {
+        Integer[] values=    {1, 2};
+        double[] priorities= {1.0, 0.0};
+        Heap<Integer> mh= griesHeapify(values, priorities);
+        mh.add(3, 0.5);
+        Integer[] valuesRes=    {3, 2, 1};
+        double[] prioritiesRes= {0.5, 0.0, 1.0};
+        Heap<Integer> mhRes= griesHeapify(valuesRes, prioritiesRes);
+        check(mhRes, mh);
+    }
+
+    @Test
+    /** Test add and bubble up. */
+    public void test15add_BubbleUp() {
+        Heap<Integer> mh= griesHeapify(new Integer[]{3, 6, 8});
+        String msg= "Adding 5 into heap [3, 6, 8]";
+        mh.add(5, 5.0);
+        check(new Integer[]{3, 5, 8, 6}, new double[]{3.0, 5.0, 8.0, 6.0}, mh);
+
+        Heap<Integer> mh1= griesHeapify(new Integer[]{3, 5, 8, 6});
+        String msg1= "Adding 4 into heap [3, 5, 6, 8]";
+        mh1.add(4, 4.0);
+        check(new Integer[]{3, 4, 8, 6, 5}, new double[]{3.0, 4.0, 8.0, 6.0, 5.0}, mh1);
+
+        Heap<Integer> mh2= griesHeapify(new Integer[]{3, 6, 8});
+        mh2.add(5, 5.0);
+        check(new Integer[]{3, 5, 8, 6}, new double[]{3.0, 5.0, 8.0, 6.0}, mh2);
+
+        Heap<Integer> mh3= griesHeapify(new Integer[]{3, 5, 6, 8});
+        mh3.add(4, 4.0);
+        check(new Integer[]{3, 4, 6, 8, 5}, new double[]{3.0, 4.0, 6.0, 8.0, 5.0}, mh3);
+
+        Heap<Integer> mh4= griesHeapify(new Integer[]{3, 4, 8, 6, 5});
+        String msg4= "Adding 1 into heap [3, 4, 8, 6, 5]";
+        mh4.add(1, 1.0);
+        check(new Integer[]{1, 4, 3, 6, 5, 8}, new double[]{1.0, 4.0, 3.0, 6.0, 5.0, 8.0}, mh4);
+    }
+    
+    @Test
+    /** Test add and bubble up. */
+    public void test16addMaxHeap_BubbleUp() {
+        Heap<Integer> mh1= griesHeapifyMax(new Integer[]{8, 5, 6, 3});
+        String msg1= "Adding 9 into heap [8, 5, 6, 3]";
+        mh1.add(9, 9.0);
+        check(new Integer[]{9, 8, 6, 3, 5}, new double[]{9.0, 8.0, 6.0, 3.0, 5.0}, mh1);
+        
+        Heap<Integer> mh= griesHeapifyMax(new Integer[]{8, 3, 6});
+        String msg= "Adding 5 into heap [8, 3, 6]";
+        mh.add(5, 5.0);
+        check(new Integer[]{8, 5, 6, 3}, new double[]{8.0, 5.0, 6.0, 3.0}, mh);
+
+        Heap<Integer> mh2= griesHeapifyMax(new Integer[]{8, 3, 6});
+        mh2.add(2, 2.0);
+        check(new Integer[]{8, 3, 6, 2}, new double[]{8.0, 3.0, 6.0, 2.0}, mh2);
+
+        Heap<Integer> mh3= griesHeapifyMax(new Integer[]{8, 5, 6, 4});
+        mh3.add(7, 7.0);
+        check(new Integer[]{8, 7, 6, 4, 5}, new double[]{8.0, 7.0, 6.0, 4.0, 5.0}, mh3);
+
+        Heap<Integer> mh4= griesHeapifyMax(new Integer[]{8, 5, 6, 4});
+        String msg4= "Adding 1 into heap [8, 5, 6, 4]";
+        mh4.add(1, 1.0);
+        check(new Integer[]{8, 5, 6, 4, 1}, new double[]{8.0, 5.0, 6.0, 4.0, 1.0}, mh4);
+    }
+
+    @Test
+    /** Test add and bubble up with duplicate priorities */
+    public void test17add_BubbleUpDuplicatePriorities() {
+        Heap<Integer> mh= griesHeapify(new Integer[]{4});
+        String msg= "Adding (2, 4.0) into heap []";
+        mh.add(2, 4.0);
+        check(new Integer[]{4, 2}, new double[]{4.0, 4.0}, mh);
+
+        Heap<Integer> mh1= griesHeapify(new Integer[]{4, 2}, new double[] {4.0, 4.0});
+        String msg1= "Adding (1, 4.0) into heap [4,2] --all priorities 4.0";
+        mh1.add(1, 4.0);
+        check(new Integer[]{4, 2, 1}, new double[]{4.0, 4.0, 4.0}, mh1);
+
+        Heap<Integer> mh2= griesHeapify(new Integer[]{4, 2, 1}, new double[] {4.0, 4.0, 4.0});
+        String msg2= "Adding (0, 4.0) into heap [4, 2, 1] --all priorities 4.0";
+        mh2.add(0, 4.0);
+        check(new Integer[]{4, 2, 1, 0}, new double[]{4.0, 4.0, 4.0, 4.0}, mh2);
+    }
+    
+    @Test
+    /** Test add and bubble up with duplicate priorities */
+    public void test17addMax_BubbleUpDuplicatePriorities() {
+        Heap<Integer> mh= griesHeapifyMax(new Integer[]{-4});
+        String msg= "Adding (2, -4.0) into heap []";
+        mh.add(2, -4.0);
+        check(new Integer[]{-4, 2}, new double[]{-4.0, -4.0}, mh);
+
+        Heap<Integer> mh1= griesHeapifyMax(new Integer[]{4, 2}, new double[] {-4.0, -4.0});
+        String msg1= "Adding (1, -4.0) into heap [4,2] --all priorities -4.0";
+        mh1.add(1, -4.0);
+        check(new Integer[]{4, 2, 1}, new double[]{-4.0, -4.0, -4.0}, mh1);
+
+        Heap<Integer> mh2= griesHeapifyMax(new Integer[]{4, 2, 1}, new double[] {-4.0, -4.0, -4.0});
+        String msg2= "Adding (0, -4.0) into heap [4, 2, 1] --all priorities -4.0";
+        mh2.add(0, -4.0);
+        check(new Integer[]{4, 2, 1, 0}, new double[]{-4.0, -4.0, -4.0, -4.0}, mh2);
+    }
+
+    @Test
+    /** Test peek. */
+    public void test25MinPeek() {
+        Heap<Integer> mh= griesHeapify(new Integer[]{1, 3});
+        String msg= "Testing peek on heap [1, 3] --values are priorities";
+        assertEquals(new Integer(1), mh.peek());
+        check(new Integer[]{1, 3}, new double[]{1.0, 3.0}, mh);
+
+        Heap<Integer> mh1= griesHeapify(new Integer[] {});
+        assertThrows(NoSuchElementException.class, () -> {mh1.peek();});
+    }
+    
+    @Test
+    /** Test peek. */
+    public void test25MaxPeek() {
+        Heap<Integer> mh= griesHeapifyMax(new Integer[]{3, 1});
+        String msg= "Testing peek on heap [3, 1] --values are priorities";
+        assertEquals(new Integer(3), mh.peek());
+        check(new Integer[]{3, 1}, new double[]{3.0, 1.0}, mh);
+
+        Heap<Integer> mh1= griesHeapify(new Integer[] {});
+        assertThrows(NoSuchElementException.class, () -> {mh1.peek();});
+    }
+
+    @Test
+    /** Test that when bubbling down with two children with same priority,
+     * the right one is used, without using poll.*/
+    public void test30MinBubbledown() {
+        Integer[] c= {0, 1, 2};
+        double[] p= {8.0, 5.0, 5.0};
+        Heap<Integer> h=  griesHeapify(c, p);
+        h.bubbleDown(0);
+
+        Integer[] cexp= {2, 1, 0};
+        double[] pexp= {5.0, 5.0, 8.0};
+        Heap<Integer> hexp=  griesHeapify(cexp, pexp);
+
+        check(h, hexp);
+    }
+
+    @Test
+    /** Test bubbleDown without using poll.
+     * The heap is filled to capacity. */
+    public void test31MinBubbledown() {
+        Integer[] values=    {10, 3, 2, 4, 5, 9, 1, 6, 7, 8};
+        double[] priorities= {10, 3, 2, 4, 5, 9, 1, 6, 7, 8};
+        Heap<Integer> mh= griesHeapify(values, priorities);
+        mh.bubbleDown(0);
+        Integer[] valuesRes=    {2, 3, 1, 4, 5, 9, 10, 6, 7, 8};
+        double[] prioritiesRes= {2, 3, 1, 4, 5, 9, 10, 6, 7, 8};
+        Heap<Integer> mhRes= griesHeapify(valuesRes, prioritiesRes);
+        check(mhRes, mh);
+    }
+
+    @Test
+    /** Test bubbleDown without using poll.
+     * Should bubble down only once  */
+    public void test31MinBubbledown2() {
+        Integer[] values=    {10, 3, 2, 4, 5, 12, 11, 6, 7, 8};
+        double[] priorities= {10, 3, 2, 4, 5, 12, 11, 6, 7, 8};
+        Heap<Integer> mh= griesHeapify(values, priorities);
+        mh.bubbleDown(0);
+        Integer[] valuesRes=    {2, 3, 10, 4, 5, 12, 11, 6, 7, 8};
+        double[] prioritiesRes= {2, 3, 10, 4, 5, 12, 11, 6, 7, 8};
+        Heap<Integer> mhRes= griesHeapify(valuesRes, prioritiesRes);
+        check(mhRes, mh);
+    }
+    
+    @Test
+    /** Test bubbleDown without using poll.
+     * Should bubble down only once  */
+    public void test31MaxBubbledown2() {
+        Integer[] values=    {10, 3, 2, 4, 5, 12, 11, 6, 7, 8};
+        double[] priorities= {-10, -3, -2, -4, -5, -12, -11, -6, -7, -8};
+        Heap<Integer> mh= griesHeapifyMax(values, priorities);
+        mh.bubbleDown(0);
+        Integer[] valuesRes=    {2, 3, 10, 4, 5, 12, 11, 6, 7, 8};
+        double[] prioritiesRes= {-2, -3, -10, -4, -5, -12, -11, -6, -7, -8};
+        Heap<Integer> mhRes= griesHeapify(valuesRes, prioritiesRes);
+        check(mhRes, mh);
+    }
+
+    @Test
+    /** Test bubbleDown right child This checks the case that
+     * left child has bigger priority but right child has smaller one.
+     * The heap is filled to capacity. */
+    public void test31Bubble_downRight() {
+        Integer[] values=    {4,   2,   3};
+        double[] priorities= {4.0, 5.0, 3.0};
+        Heap<Integer> mh= griesHeapify(values, priorities);
+        mh.bubbleDown(0);
+        Integer[] valuesRes=    {3,   2,   4};
+        double[] prioritiesRes= {3.0, 5.0, 4.0};
+        Heap<Integer> mhRes= griesHeapify(valuesRes, prioritiesRes);
+        check(mhRes, mh);
+    }
+
+    @Test
+    /** Test bubbleDown right child. This checks the case that
+     * left child has bigger priority but right child has smaller one.
+     * With bubbling down twice. */
+    public void test31MinBubbleDownRight2() {
+        Integer[] values=    {5, 6, 3, 8, 9, 7, 4};
+        double[] priorities= {5, 6, 3, 8, 9, 7, 4};
+        Heap<Integer> mh= griesHeapify(values, priorities);
+        mh.bubbleDown(0);
+        Integer[] valuesRes=    {3, 6, 4, 8, 9, 7, 5};
+        double[] prioritiesRes= {3, 6, 4, 8, 9, 7, 5};
+        Heap<Integer> mhRes= griesHeapify(valuesRes, prioritiesRes);
+        check(mhRes, mh);
+    }
+    
+    @Test
+    /** Test bubbleDown right child. This checks the case that
+     * left child has bigger priority but right child has smaller one.
+     * With bubbling down twice. */
+    public void test31MaxBubbleDownRight2() {
+        Integer[] values=    {5, 6, 3, 8, 9, 7, 4};
+        double[] priorities= {-5, -6, -3, -8, -9, -7, -4};
+        Heap<Integer> mh= griesHeapifyMax(values, priorities);
+        mh.bubbleDown(0);
+        Integer[] valuesRes=    {3, 6, 4, 8, 9, 7, 5};
+        double[] prioritiesRes= {-3, -6, -4, -8, -9, -7, -5};
+        Heap<Integer> mhRes= griesHeapifyMax(valuesRes, prioritiesRes);
+        check(mhRes, mh);
+    }
+
+    @Test
+    /** Test poll and bubbledown with no duplicate priorities. */
+    public void test30Poll_BubbleDown_NoDups() {
+        Heap<Integer> mh= minHeapify(new Integer[]{5});
+        Integer res= mh.poll();
+        assertEquals(new Integer(5), res);
+        check(new Integer[]{}, new double[]{}, mh);
+
+        Heap<Integer> mh1= minHeapify(new Integer[]{5, 6});
+        Integer res1= mh1.poll();
+        assertEquals(new Integer(5), res1);
+        check(new Integer[]{6}, new double[]{6.0}, mh1);
+
+        // this requires comparing lchild and rchild and using lchild
+        Heap<Integer> mh2= minHeapify(new Integer[] {4, 5, 6, 7, 8, 9});
+        Integer res2= mh2.poll();
+        assertEquals(new Integer(4), res2);
+        check(new Integer[]{5, 7, 6, 9, 8}, new double[]{5.0, 7.0, 6.0, 9.0, 8.0}, mh2);
+
+        // this requires comparing lchild and rchild and using rchild
+        Heap<Integer> mh3= minHeapify(new Integer[] {4, 6, 5, 7, 8, 9});
+        Integer res3= mh3.poll();
+        assertEquals(new Integer(4), res3);
+        check(new Integer[]{5, 6, 9, 7, 8}, new double[]{5.0, 6.0, 9.0, 7.0, 8.0}, mh3);
+
+        // this requires bubbling down when only one child
+        Heap<Integer> mh4= minHeapify(new Integer[] {4, 5, 6, 7, 8});
+        Integer res4= mh4.poll();
+        assertEquals(new Integer(4), res4);
+        check(new Integer[]{5,7, 6, 8}, new double[]{5.0, 7.0, 6.0, 8.0}, mh4);
+
+        Heap<Integer> mh5= minHeapify(new Integer[] {2, 4, 3, 6, 7, 8, 9});
+        Integer res5= mh5.poll();
+        assertEquals(new Integer(2), res5);
+        check(new Integer[]{3, 4, 8, 6, 7, 9}, new double[]{3.0, 4.0, 8.0, 6.0, 7.0, 9.0}, mh5);
+
+        Heap<Integer> mh6= minHeapify(new Integer[] {2, 4, 3, 6, 7, 9, 8});
+        Integer res6= mh6.poll();
+        assertEquals(new Integer(2), res6);
+        check(new Integer[]{3, 4, 8, 6, 7, 9}, new double[]{3.0, 4.0, 8.0, 6.0, 7.0, 9.0}, mh6);
+
+        Heap<Integer> mh7= new Heap<Integer>(true);
+        assertThrows(NoSuchElementException.class, () -> {mh7.poll();});
+    }
+
+    @Test
+    /** Test that polling from an array filled to capacity works.
+     * We do this with all priorities the same so bubbling down does nothing. */
+    public void test33Poll() {
+        Integer[] b= new Integer[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+        double[]  p= new double[] {5, 5, 5, 5, 5, 5, 5, 5, 5, 5};
+        Heap<Integer> mh= griesHeapify(b, p);
+        int v= mh.poll();
+        assertEquals(0, v);
+
+        Integer[] bRes= new Integer[]{9, 1, 2, 3, 4, 5, 6, 7, 8};
+        double[]  pRes= new double[] {5, 5, 5, 5, 5, 5, 5, 5, 5};
+        check(bRes, pRes, mh);
+    }
+
+    @Test
+    /** Test that polling from an array of size 3 works
+     * where a bubble down is necessary. */
+    public void test34Poll() {
+        Integer[] b= new Integer[]{1, 2, 3};
+        double[]  p= new double[] {1.0, 2.0, 3.0};
+        Heap<Integer> mh= griesHeapify(b, p);
+        int v= mh.poll();
+        assertEquals(1, v);
+
+        Integer[] bRes= new Integer[]{2, 3};
+        double[]  pRes= new double[] {2.0, 3.0};
+        check(bRes, pRes, mh);
+    }
+
+    @Test
+    /** Test bubble-up and bubble-down with duplicate priorities. */
+    public void test40testDuplicatePriorities() {
+        // values should not bubble up or down past ones with duplicate priorities.
+        // First two check bubble up
+        Heap<Integer> mh1= minHeapify(new Integer[] {6}, new double[] {4.0});
+        mh1.add(5, 4.0);
+        check(new Integer[]{6, 5}, new double[]{4.0, 4.0}, mh1);
+
+        Heap<Integer> mh2= minHeapify(new Integer[] {7, 6}, new double[] {4.0, 4.0});
+        mh2.add(3, 4.0);
+        check(new Integer[]{7, 6, 3}, new double[]{4.0, 4.0, 4.0}, mh2);
+
+        // Check bubble up
+        Heap<Integer> mh3= minHeapify(new Integer[] {5, 6, 7}, new double[] {4.0, 4.0, 4.0});
+        mh3.poll();
+        check(new Integer[]{7, 6}, new double[]{4.0, 4.0}, mh3);
+
+        // Check bubble up
+        Heap<Integer> mh4= minHeapify(new Integer[] {5, 7, 6, 8}, new double[] {4.0, 4.0, 4.0, 4.0});
+        mh4.poll();
+        check(new Integer[]{8, 7, 6}, new double[]{4.0, 4.0, 4.0}, mh4);
+
+    }
+
+    @Test
+    /** Test updatePriority in a min-heap. */
+    public void test50MinupdatePriority() {
+        // First three: bubble up tests
+        Heap<Integer> mh1= minHeapify(new Integer[] {1, 2, 3, 5, 6, 7, 9});
+        mh1.updatePriority(5, 4.0);
+        check(new Integer[]{1, 2, 3, 5, 6, 7, 9}, new double[]{1.0, 2.0, 3.0, 4.0, 6.0, 7.0, 9.0}, mh1);
+
+        Heap<Integer> mh2= minHeapify(new Integer[] {1, 2, 3, 5, 6, 7, 9});
+        mh2.updatePriority(2, 1.0);
+        check(new Integer[]{1, 2, 3, 5, 6, 7, 9}, new double[]{1.0, 1.0, 3.0, 5.0, 6.0, 7.0, 9.0}, mh2);
+
+        Heap<Integer> mh3= minHeapify(new Integer[] {1, 2, 3, 5, 6, 7, 9});
+        mh3.updatePriority(5, 1.0);
+        check(new Integer[]{1, 5, 3, 2, 6, 7, 9}, new double[]{1.0, 1.0, 3.0, 2.0, 6.0, 7.0, 9.0}, mh3);
+
+        // second three: bubble down tests
+        Heap<Integer> mh4= minHeapify(new Integer[] {1, 2, 3, 5, 6, 7, 9});
+        mh4.updatePriority(2, 5.0);
+        check(new Integer[]{1, 2, 3, 5, 6, 7, 9}, new double[]{1.0, 5.0, 3.0, 5.0, 6.0, 7.0, 9.0}, mh4);
+
+        Heap<Integer> mh5= minHeapify(new Integer[] {1, 2, 3, 5, 6, 7, 9});
+        mh5.updatePriority(2, 6.0);
+        check(new Integer[]{1, 5, 3, 2, 6, 7, 9}, new double[]{1.0, 5.0, 3.0, 6.0, 6.0, 7.0, 9.0}, mh5);
+
+        Heap<Integer> mh6= minHeapify(new Integer[] {1, 2, 3, 5, 6, 7, 9});
+        mh6.updatePriority(1, 7.0);
+        check(new Integer[]{2, 5, 3, 1, 6, 7, 9}, new double[]{2.0, 5.0, 3.0, 7.0, 6.0, 7.0, 9.0}, mh6);
+
+        // throw exception test
+        Heap<Integer> mh7= new Heap<Integer>(true);
+        mh7.add(5, 5.0);
+        assertThrows(IllegalArgumentException.class, () -> {mh7.updatePriority(6, 5.0);});
+    }
+    
+    @Test
+    /** Test updatePriority in a max-heap. */
+    public void test50MaxupdatePriority() {
+        // First three: bubble up tests
+        Heap<Integer> mh1= maxHeapify(new Integer[] {9, 7, 6, 5, 3, 2, 1});
+        mh1.updatePriority(5, 6.0);
+        check(new Integer[]{9, 7, 6, 5, 3, 2, 1}, new double[]{9.0, 7.0, 6.0, 6.0, 3.0, 2.0, 1.0}, mh1);
+
+        Heap<Integer> mh3= maxHeapify(new Integer[] {9, 7, 6, 5, 3, 2, 1});
+        mh3.updatePriority(5, 9.0);
+        check(new Integer[]{9, 5, 6, 7, 3, 2, 1}, new double[]{9.0, 9.0, 6.0, 7.0, 3.0, 2.0, 1.0}, mh3);
+
+        Heap<Integer> mh5= maxHeapify(new Integer[] {9, 7, 6, 5, 3, 2, 1});
+        mh5.updatePriority(2, 6.0);
+        check(new Integer[]{9, 7, 6, 5, 3, 2, 1}, new double[]{9.0, 7.0, 6.0, 5.0, 3.0, 6.0, 1.0}, mh5);
+
+        // second three: bubble down tests
+        Heap<Integer> mh2= maxHeapify(new Integer[] {9, 7, 6, 5, 3, 2, 1});
+        mh2.updatePriority(9, 3.0);
+        check(new Integer[]{7, 5, 6, 9, 3, 2, 1}, new double[]{7.0, 5.0, 6.0, 3.0, 3.0, 2.0, 1.0}, mh2);
+
+        Heap<Integer> mh4= maxHeapify(new Integer[] {9, 7, 6, 5, 3, 2, 1});
+        mh4.updatePriority(6, 0.0);
+        check(new Integer[]{9, 7, 2, 5, 3, 6, 1}, new double[]{9.0, 7.0, 2.0, 5.0, 3.0, 0.0, 1.0}, mh4);
+
+        Heap<Integer> mh6= maxHeapify(new Integer[] {8, 7, 6, 5, 3, 2, 1});
+        mh6.updatePriority(1, 9.0);
+        check(new Integer[]{1, 7, 8, 5, 3, 2, 6}, new double[]{9.0, 7.0, 8.0, 5.0, 3.0, 2.0, 6.0}, mh6);
+
+        // throw exception test
+        Heap<Integer> mh7= new Heap<Integer>(true);
+        mh7.add(5, 5.0);
+        assertThrows(IllegalArgumentException.class, () -> {mh7.updatePriority(6, 5.0);});
+    }
+
+    @Test
+    /** Test a few calls with Strings */
+    public void test70Strings() {
+        Heap<String> mh= new Heap<String>(true);
+        check(new String[]{}, new double[]{}, mh);
+        mh.add("abc", 5.0);
+        check(new String[]{"abc"}, new double[]{5.0}, mh);
+        mh.add(null, 3.0);
+        check(new String[]{null, "abc"}, new double[]{3.0, 5.0}, mh);
+        mh.add("", 2.0);
+        check(new String[]{"", "abc", null}, new double[]{2.0, 5.0, 3.0}, mh);
+        String p= mh.poll();
+        check(new String[]{null, "abc"}, new double[]{3.0, 5.0}, mh);
+        mh.updatePriority(null, 7.0);
+        check(new String[]{"abc", null}, new double[]{5.0, 7.0}, mh);
+    }
+
+    @Test
+    /** Test using values in 0..999 and random values for the priorities.
+     *  There will be duplicate priorities. */
+    public void test90BigTests() {
+        // The values to put in Heap
+        int[] b= new int[1000];
+        for (int k= 0; k < b.length; k= k+1) {
+            b[k]= k;
         }
 
+        Random rand= new Random(52); 
+
+        // bp: priorities of the values
+        double[] bp= new double[b.length];
+        for (int k= 0; k < bp.length; k= k+1) {
+            bp[k]= (int)(rand.nextDouble()*bp.length/3);
+        }
+
+        // Build the Heap and map to be able to get priorities easily
+        Heap<Integer> mh= new Heap<Integer>(true);
+        HashMap<Integer, Double> hashMap= new HashMap<Integer, Double>();
+        for (int k= 0; k < b.length; k= k+1) {
+            mh.add(b[k], bp[k]);
+            hashMap.put(b[k], bp[k]);
+        }
+
+        // Poll the heap into array bpoll
+        int[] bpoll= new int[b.length];
+        pollHeap(mh, b);
+
+        // Check that the priorities of the polled values are in order.
+        Double previousPriority= hashMap.get(bpoll[0]);
+        boolean inOrder= true;
+        for (int k= 1; k < bpoll.length;  k= k+1) {
+            Double p= hashMap.get(bpoll[k]);
+            inOrder= inOrder  &&  previousPriority <= p;
+            previousPriority= p;
+        }
+        boolean finalInOrder= inOrder;
+        assertEquals("Polled values are in order", true, finalInOrder);
     }
 
-    /** If this is a min-heap, return the heap value with lowest priority.
-     *  If this is a max-heap, return the heap value with highest priority
-     *  Do not change the heap. This operation takes constant time.
-     *  Throw a NoSuchElementException if the heap is empty. */
-    public E peek() {
-        // TODO 5: Do peek. This is an easy one. If it is correct,
-        //         test25MinPeek() and test25MaxPeek will show no errors.
-    	if(size==0) throw new NoSuchElementException("Heap empty.");
-    	return d[0].val;
-    }
-
-    /** Bubble d[k] down in heap until it finds the right place.
-     *  If there is a choice to bubble down to both the left and
-     *  right children (because their priorities are equal), choose
-     *  the right child.
-     *  Precondition: 0 <= k < size   and
-     *           Class invariant is true except that perhaps
-     *           d[k] belongs below one or both of its children. */
-    void bubbleDown(int k) {
-        // TODO 6: We suggest implementing and using upperChildOf, though
-        //         you don't have to. DO NOT USE RECURSION. Use iteration.
-        //         When this method is correct, testing procedures
-        //         test30MinBubbledown and test31MinBubbledown and
-        //         test31MaxBubbledown will not find errors.
-        assert 0 <= k  &&  k < size;
-        int c = upperChild(k);
-        while(c!=k && compareTo(d[c].priority,d[k].priority)>0) {
-        	swap(c,k);
-        	k = c;
-        	c = upperChild(k);
+    /** Poll all elements of m into d.
+     * Precondition m and d are the same size. */
+    public void pollHeap(Heap<Integer> m, int[] b) {
+        for (int k= 0; k < b.length; k= k+1) {
+            b[k]= m.poll();
         }
     }
 
-    /** If d[n] doesn't exist or has no child, return n.
-     *  If d[n] has one child, return its index.
-     *  If d[n] has two children with the same priority, return the
-     *      index of the right one.
-     *  If d[n] has two children with different priorities return the
-     *      index of the one that must appear above the other in a heap. */
-    protected int upperChild(int n) {
-        if(n>size-1 || 2*n+1>size-1) return n;
-        if(2*n+2>size-1) return 2*n+1;
-        if(d[2*n+1].val==d[2*n+2].val) return 2*n+2;
-        if(compareTo(d[2*n+1].priority,d[2*n+2].priority)>0) return 2*n+1;
-        return 2*n+2;
-    }
 
-    /** If this is a min-heap, remove and return heap value with lowest priority.
-     * If this is a max-heap, remove and return heap value with highest priority.
-     * The expected time is logarithmic and the worst-case time is linear
-     * in the size of the heap.
-     * Throw a NoSuchElementException if the heap is empty. */
-    public E poll() {
-        // TODO 7: When this method is written correctly, testing procedure
-        //         test30Poll_BubbleDown_NoDups will not find errors.
-        // 
-        //         Note also testing procedure test40DuplicatePriorities
-        //         This method tests to make sure that when bubbling up or down,
-        //         two values with the same priority are not swapped.
-    	if(size==0) throw new NoSuchElementException("Heap is empty.");
-    	E n = d[0].val;
-    	map.put(d[size-1].val, 0);
-    	d[0]=d[size-1];
-    	map.remove(n);
-    	size--;
-    	if(size>0) bubbleDown(0);
-        return n;
-    }
-
-    /** Change the priority of value v to p.
-     *  The expected time is logarithmic and the worst-case time is linear
-     *  in the size of the heap.
-     *  Throw an IllegalArgumentException if v is not in the heap. */
-    public void updatePriority(E v, double p) {
-        // TODO  8: When this method is correctly implemented, testing procedure
-        //          test50updatePriority() won't find errors.
-    	if(!map.containsKey(v))throw new IllegalArgumentException("Not found");
-    	System.out.println(map.toString());
-    	int k = map.get(v);
-        d[k].priority = p;
-        System.out.printf("%d|",k);
-        if(k>0) bubbleUp(k);
-        if(map.get(v)==k) bubbleDown(k);
-
-    }
-
-    /** Create and return an array of size n.
-     *  This is necessary because generics and arrays don't interoperate nicely.
-     *  A student in CS2110 would not be expected to know about the need
-     *  for this method and how to write it. We had to search the web to
-     *  find out how to do it. */
-    VP[] createVPArray(int n) {
-        return (VP[]) Array.newInstance(VP.class, n);
-    }
 }
+
