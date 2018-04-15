@@ -1,18 +1,3 @@
-package student;
-
-/** NetId(s): jl3752. Time spent: 1 hours, 30 minutes.
-*
-* Please be careful in replacing nnnn by netids and hh by hours and
-* mm by minutes. Any mistakes cause us to have to fix this manually
-* before extracting times, in order to give you the max and median and mean.
-* Thanks
-* 
-* Name(s):
-* What I thought about this assignment:
-* The assignment is really simple once you have gathered all the necessary info.
-* 
-*
-*/
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
